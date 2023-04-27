@@ -1,6 +1,6 @@
-import JSBI from 'jsbi'
+import bigInt, { BigInteger } from 'big-integer'
 import invariant from 'tiny-invariant'
-import { WETH9 as _WETH9, TradeType, Token, CurrencyAmount } from '@uniswap/sdk-core'
+import { WETH9 as _WETH9, TradeType, Token, CurrencyAmount } from '@liuqiang1357/uniswap-sdk-core'
 import { Pair, Route, Trade } from '../index'
 
 const ADDRESSES = [
@@ -16,8 +16,8 @@ const DECIMAL_PERMUTATIONS: [number, number, number][] = [
   [18, 18, 18]
 ]
 
-function decimalize(amount: number, decimals: number): JSBI {
-  return JSBI.multiply(JSBI.BigInt(amount), JSBI.exponentiate(JSBI.BigInt(10), JSBI.BigInt(decimals)))
+function decimalize(amount: number, decimals: number): BigInteger {
+  return bigInt(amount).multiply(bigInt(10).pow(bigInt(decimals)))
 }
 
 describe('entities', () => {
@@ -127,9 +127,8 @@ describe('entities', () => {
                   CurrencyAmount.fromRawAmount(tokens[1], decimalize(1, tokens[1].decimals)),
                   CurrencyAmount.fromRawAmount(
                     WETH9,
-                    JSBI.add(
-                      decimalize(10, WETH9.decimals),
-                      tokens[1].decimals === 9 ? JSBI.BigInt('30090280812437312') : JSBI.BigInt('30090270812437322')
+                    decimalize(10, WETH9.decimals).add(
+                      tokens[1].decimals === 9 ? bigInt('30090280812437312') : bigInt('30090270812437322')
                     )
                   )
                 )
