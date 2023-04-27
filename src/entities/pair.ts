@@ -1,10 +1,10 @@
-import { BigintIsh, Price, sqrt, Token, CurrencyAmount } from '@liuqiang1357/uniswap-sdk-core'
+import { BigintIsh, Price, sqrt, Token, CurrencyAmount, Fraction } from '@liuqiang1357/uniswap-sdk-core'
 import invariant from 'tiny-invariant'
 import bigInt, { BigInteger } from 'big-integer'
 import { pack, keccak256 } from '@ethersproject/solidity'
 import { getCreate2Address } from '@ethersproject/address'
 
-import { FACTORY_ADDRESS, INIT_CODE_HASH, MINIMUM_LIQUIDITY, FIVE, _997, _1000, ONE, ZERO } from '../constants'
+import { FACTORY_ADDRESS, INIT_CODE_HASH, MINIMUM_LIQUIDITY, FIVE, ONE, ZERO } from '../constants'
 import { InsufficientReservesError, InsufficientInputAmountError } from '../errors'
 
 export const computePairAddress = ({
@@ -106,16 +106,16 @@ export class Pair {
     return token.equals(this.token0) ? this.reserve0 : this.reserve1
   }
 
-  public getOutputAmount(inputAmount: CurrencyAmount<Token>): [CurrencyAmount<Token>, Pair] {
+  public getOutputAmount(inputAmount: CurrencyAmount<Token>, feeRate: Fraction): [CurrencyAmount<Token>, Pair] {
     invariant(this.involvesToken(inputAmount.currency), 'TOKEN')
     if (this.reserve0.quotient.equals(ZERO) || this.reserve1.quotient.equals(ZERO)) {
       throw new InsufficientReservesError()
     }
     const inputReserve = this.reserveOf(inputAmount.currency)
     const outputReserve = this.reserveOf(inputAmount.currency.equals(this.token0) ? this.token1 : this.token0)
-    const inputAmountWithFee = inputAmount.quotient.multiply(_997)
+    const inputAmountWithFee = inputAmount.quotient.multiply(feeRate.denominator.minus(feeRate.numerator))
     const numerator = inputAmountWithFee.multiply(outputReserve.quotient)
-    const denominator = inputReserve.quotient.multiply(_1000).add(inputAmountWithFee)
+    const denominator = inputReserve.quotient.multiply(feeRate.denominator).add(inputAmountWithFee)
     const outputAmount = CurrencyAmount.fromRawAmount(
       inputAmount.currency.equals(this.token0) ? this.token1 : this.token0,
       numerator.divide(denominator)
@@ -126,7 +126,7 @@ export class Pair {
     return [outputAmount, new Pair(inputReserve.add(inputAmount), outputReserve.subtract(outputAmount))]
   }
 
-  public getInputAmount(outputAmount: CurrencyAmount<Token>): [CurrencyAmount<Token>, Pair] {
+  public getInputAmount(outputAmount: CurrencyAmount<Token>, feeRate: Fraction): [CurrencyAmount<Token>, Pair] {
     invariant(this.involvesToken(outputAmount.currency), 'TOKEN')
     if (
       this.reserve0.quotient.equals(ZERO) ||
@@ -138,8 +138,8 @@ export class Pair {
 
     const outputReserve = this.reserveOf(outputAmount.currency)
     const inputReserve = this.reserveOf(outputAmount.currency.equals(this.token0) ? this.token1 : this.token0)
-    const numerator = inputReserve.quotient.multiply(outputAmount.quotient).multiply(_1000)
-    const denominator = outputReserve.quotient.subtract(outputAmount.quotient).multiply(_997)
+    const numerator = inputReserve.quotient.multiply(outputAmount.quotient).multiply(feeRate.denominator)
+    const denominator = outputReserve.quotient.subtract(outputAmount.quotient).multiply(feeRate.denominator.minus(feeRate.numerator))
     const inputAmount = CurrencyAmount.fromRawAmount(
       outputAmount.currency.equals(this.token0) ? this.token1 : this.token0,
       numerator.divide(denominator).add(ONE)

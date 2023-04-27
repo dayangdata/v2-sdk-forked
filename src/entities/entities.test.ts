@@ -1,6 +1,6 @@
 import bigInt, { BigInteger } from 'big-integer'
 import invariant from 'tiny-invariant'
-import { WETH9 as _WETH9, TradeType, Token, CurrencyAmount } from '@liuqiang1357/uniswap-sdk-core'
+import { WETH9 as _WETH9, TradeType, Token, CurrencyAmount, Fraction } from '@liuqiang1357/uniswap-sdk-core'
 import { Pair, Route, Trade } from '../index'
 
 const ADDRESSES = [
@@ -15,6 +15,7 @@ const DECIMAL_PERMUTATIONS: [number, number, number][] = [
   [0, 9, 18],
   [18, 18, 18]
 ]
+const FEE_RATE = new Fraction(3, 1000);
 
 function decimalize(amount: number, decimals: number): BigInteger {
   return bigInt(amount).multiply(bigInt(10).pow(bigInt(decimals)))
@@ -88,7 +89,7 @@ describe('entities', () => {
           )
           const inputAmount = CurrencyAmount.fromRawAmount(tokens[1], decimalize(1, tokens[1].decimals))
           const expectedOutputAmount = CurrencyAmount.fromRawAmount(WETH9, '1662497915624478906')
-          const trade = new Trade(route, inputAmount, TradeType.EXACT_INPUT)
+          const trade = new Trade(route, inputAmount, TradeType.EXACT_INPUT, FEE_RATE)
           expect(trade.route).toEqual(route)
           expect(trade.tradeType).toEqual(TradeType.EXACT_INPUT)
           expect(trade.inputAmount).toEqual(inputAmount)
@@ -105,7 +106,7 @@ describe('entities', () => {
         it('TradeType.EXACT_OUTPUT', () => {
           const outputAmount = CurrencyAmount.fromRawAmount(WETH9, '1662497915624478906')
           const expectedInputAmount = CurrencyAmount.fromRawAmount(tokens[1], decimalize(1, tokens[1].decimals))
-          const trade = new Trade(route, outputAmount, TradeType.EXACT_OUTPUT)
+          const trade = new Trade(route, outputAmount, TradeType.EXACT_OUTPUT, FEE_RATE)
           expect(trade.route).toEqual(route)
           expect(trade.tradeType).toEqual(TradeType.EXACT_OUTPUT)
           expect(trade.outputAmount).toEqual(outputAmount)
@@ -137,7 +138,7 @@ describe('entities', () => {
               WETH9
             )
             const outputAmount = CurrencyAmount.fromRawAmount(tokens[1], '1')
-            const trade = new Trade(route, outputAmount, TradeType.EXACT_INPUT)
+            const trade = new Trade(route, outputAmount, TradeType.EXACT_INPUT, FEE_RATE)
 
             expect(trade.priceImpact.toSignificant(18)).toEqual(
               tokens[1].decimals === 9 ? '0.300000099400899902' : '0.3000000000000001'
